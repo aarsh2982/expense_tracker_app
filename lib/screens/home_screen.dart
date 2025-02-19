@@ -1,3 +1,4 @@
+import 'package:expense_tracker_app/screens/monthly_report.dart';
 import 'package:flutter/material.dart';
 import 'package:expense_tracker_app/database_helper.dart';
 import 'package:expense_tracker_app/models/item_model.dart';
@@ -207,6 +208,62 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 8),
           ],
           elevation: 0,
+        ),
+        drawer: Drawer(
+          child: Column(
+            children: [
+              UserAccountsDrawerHeader(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).primaryColor,
+                      Theme.of(context).primaryColorDark,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                accountName: const Text(
+                  'Expense Tracker',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                accountEmail: const Text('example@example.com'),
+                currentAccountPicture: CircleAvatar(
+                  backgroundColor: Colors.white,
+                  child: Text(
+                    'ET',
+                    style: TextStyle(
+                      fontSize: 24,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.report),
+                title: const Text('Monthly Report'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MonthlyReportScreen(),
+                    ),
+                  );
+                },
+              ),
+              const Divider(),
+              SwitchListTile(
+                title: const Text('Dark Mode'),
+                secondary:
+                    Icon(_isDarkMode ? Icons.dark_mode : Icons.light_mode),
+                value: _isDarkMode,
+                onChanged: (bool value) {
+                  _toggleTheme();
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
         ),
         body: SafeArea(
           child: Column(
