@@ -19,23 +19,20 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'expense_tracker.db');
 
-    // Delete existing database to start fresh
-    await deleteDatabase(path);
-
     return await openDatabase(
       path,
       version: 1,
       onCreate: (db, version) async {
         await db.execute('''
-          CREATE TABLE items(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            amount REAL NOT NULL,
-            type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
-            category TEXT NOT NULL,
-            dateTime INTEGER NOT NULL
-          )
-        ''');
+        CREATE TABLE items(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          amount REAL NOT NULL,
+          type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+          category TEXT NOT NULL,
+          dateTime INTEGER NOT NULL
+        )
+      ''');
       },
     );
   }
