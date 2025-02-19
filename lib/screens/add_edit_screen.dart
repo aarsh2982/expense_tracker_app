@@ -26,7 +26,6 @@ class _AddEditScreenState extends State<AddEditScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-  // Separate categories for income and expense
   final List<String> _expenseCategories = [
     'Food',
     'Transport',
@@ -60,8 +59,6 @@ class _AddEditScreenState extends State<AddEditScreen>
   @override
   void initState() {
     super.initState();
-
-    // Initialize with existing data or defaults
     _title = widget.item?.title ?? '';
     _amount = widget.item?.amount ?? 0.0;
     _selectedCategory = widget.item?.category ?? widget.category;
@@ -87,10 +84,84 @@ class _AddEditScreenState extends State<AddEditScreen>
     super.dispose();
   }
 
+  Widget _buildCategoryItem(String category) {
+    final bool isSelected = _selectedCategory == category;
+    final color = widget.isIncome ? Colors.green : Colors.red;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() => _selectedCategory = category);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 12, bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    color.withOpacity(0.8),
+                    color,
+                  ],
+                )
+              : null,
+          color: isSelected ? null : Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color:
+                isSelected ? Colors.transparent : Colors.white.withOpacity(0.3),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _categoryIcons[category] ?? Icons.more_horiz,
+              color: isSelected ? Colors.white : Colors.white70,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              category,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.white70,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    final color = widget.isIncome ? Colors.green : Colors.red;
+
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: color.withOpacity(0.7)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: color.withOpacity(0.3)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: color.withOpacity(0.3)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: color),
+      ),
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.05),
+      labelStyle: TextStyle(color: color.withOpacity(0.7)),
+    );
+  }
+
   Future<void> _saveItem() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-
       try {
         final newItem = Item(
           id: widget.item?.id,
@@ -106,83 +177,43 @@ class _AddEditScreenState extends State<AddEditScreen>
           await _dbHelper.updateItem(newItem);
         }
 
-        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                '${widget.isIncome ? "Income" : "Expense"} saved successfully'),
-            backgroundColor: Colors.green,
+              '${widget.isIncome ? "Income" : "Expense"} saved successfully',
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: widget.isIncome ? Colors.green : Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
 
-        // Pop twice if showing category selection
         Navigator.pop(context);
       } catch (e) {
-        // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                'Error saving ${widget.isIncome ? "income" : "expense"}: $e'),
+              'Error saving ${widget.isIncome ? "income" : "expense"}: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
     }
   }
 
-  String? _validateAmount(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter an amount';
-    }
-    if (double.tryParse(value) == null) {
-      return 'Please enter a valid number';
-    }
-    if (double.parse(value) <= 0) {
-      return 'Amount must be greater than 0';
-    }
-    return null;
-  }
-
-  Widget _buildCategoryIcon(String category) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.blueAccent.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Icon(
-        _categoryIcons[category] ?? Icons.more_horiz,
-        color: Colors.white,
-        size: 20,
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon, color: Colors.white70),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.blueAccent),
-      ),
-      filled: true,
-      fillColor: Colors.white.withOpacity(0.1),
-      labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final categories = widget.isIncome ? _incomeCategories : _expenseCategories;
+    final color = widget.isIncome ? Colors.green : Colors.red;
 
     return Scaffold(
       backgroundColor: Colors.blueGrey[900],
@@ -193,10 +224,10 @@ class _AddEditScreenState extends State<AddEditScreen>
               : 'Edit Transaction',
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 24,
+            fontSize: 20,
           ),
         ),
-        backgroundColor: widget.isIncome ? Colors.green : Colors.redAccent,
+        backgroundColor: color,
         elevation: 0,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
@@ -214,68 +245,98 @@ class _AddEditScreenState extends State<AddEditScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title Input
+                  Card(
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    color: Colors.white.withOpacity(0.05),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Amount',
+                            style: TextStyle(
+                              color: color.withOpacity(0.7),
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            initialValue: _amount > 0 ? _amount.toString() : '',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            decoration: InputDecoration(
+                              prefixText: '₹ ',
+                              prefixStyle: TextStyle(
+                                color: Colors.white,
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              border: InputBorder.none,
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter an amount';
+                              }
+                              if (double.tryParse(value) == null) {
+                                return 'Please enter a valid number';
+                              }
+                              if (double.parse(value) <= 0) {
+                                return 'Amount must be greater than 0';
+                              }
+                              return null;
+                            },
+                            onSaved: (value) =>
+                                _amount = double.tryParse(value ?? '0') ?? 0.0,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Title',
+                    style: TextStyle(
+                      color: color.withOpacity(0.7),
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   TextFormField(
                     initialValue: _title,
                     style: const TextStyle(color: Colors.white),
-                    decoration: _inputDecoration('Title', Icons.title),
+                    decoration: _inputDecoration('Enter title', Icons.title),
                     validator: (value) =>
                         value?.isEmpty ?? true ? 'Please enter a title' : null,
                     onSaved: (value) => _title = value ?? '',
                   ),
-                  const SizedBox(height: 20),
-
-                  // Category Dropdown
-                  DropdownButtonFormField<String>(
-                    value: _selectedCategory,
-                    dropdownColor: Colors.blueGrey[800],
-                    style: const TextStyle(color: Colors.white),
-                    decoration: _inputDecoration(
-                      'Category',
-                      _categoryIcons[_selectedCategory] ?? Icons.category,
+                  const SizedBox(height: 24),
+                  Text(
+                    'Category',
+                    style: TextStyle(
+                      color: color.withOpacity(0.7),
+                      fontSize: 16,
                     ),
-                    items: categories.map((category) {
-                      return DropdownMenuItem(
-                        value: category,
-                        child: Row(
-                          children: [
-                            _buildCategoryIcon(category),
-                            const SizedBox(width: 12),
-                            Text(category,
-                                style: const TextStyle(color: Colors.white)),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _selectedCategory = value);
-                      }
-                    },
                   ),
-                  const SizedBox(height: 20),
-
-                  // Amount Input
-                  TextFormField(
-                    initialValue: _amount > 0 ? _amount.toString() : '',
-                    style: const TextStyle(color: Colors.white),
-                    decoration: _inputDecoration('Amount', Icons.money),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    validator: _validateAmount,
-                    onSaved: (value) =>
-                        _amount = double.tryParse(value ?? '0') ?? 0.0,
+                  const SizedBox(height: 16),
+                  Wrap(
+                    children: categories.map(_buildCategoryItem).toList(),
                   ),
                   const SizedBox(height: 32),
-
-                  // Save Button
                   SizedBox(
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            widget.isIncome ? Colors.green : Colors.redAccent,
+                        backgroundColor: color,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -283,9 +344,12 @@ class _AddEditScreenState extends State<AddEditScreen>
                       onPressed: _saveItem,
                       child: Text(
                         widget.item == null
-                            ? 'Add ${widget.isIncome ? "Income" : "Expense"}'
+                            ? 'Add Transaction'
                             : 'Update Transaction',
-                        style: const TextStyle(fontSize: 16),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
