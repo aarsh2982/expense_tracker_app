@@ -5,7 +5,12 @@ import 'dart:ui';
 
 class AddEditScreen extends StatefulWidget {
   final Item? item;
-  AddEditScreen({this.item});
+  final String category;
+  final bool isIncome;
+
+  const AddEditScreen(
+      {Key? key, this.item, required this.category, required this.isIncome})
+      : super(key: key);
 
   @override
   _AddEditScreenState createState() => _AddEditScreenState();
@@ -14,20 +19,28 @@ class AddEditScreen extends StatefulWidget {
 class _AddEditScreenState extends State<AddEditScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  String _title = '';
-  String? _description;
-  String _selectedCategory = 'Food';
-  double _amount = 0.0;
+  late String _title;
+  late String _selectedCategory;
+  late double _amount;
   final DatabaseHelper _dbHelper = DatabaseHelper();
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-  final List<String> _categories = [
+  // Separate categories for income and expense
+  final List<String> _expenseCategories = [
     'Food',
     'Transport',
     'Shopping',
     'Bills',
     'Entertainment',
+    'Others'
+  ];
+
+  final List<String> _incomeCategories = [
+    'Salary',
+    'Freelancing',
+    'Business',
+    'Investment',
     'Others'
   ];
 
@@ -37,17 +50,21 @@ class _AddEditScreenState extends State<AddEditScreen>
     'Shopping': Icons.shopping_bag,
     'Bills': Icons.receipt_long,
     'Entertainment': Icons.movie,
+    'Salary': Icons.work,
+    'Freelancing': Icons.computer,
+    'Business': Icons.business,
+    'Investment': Icons.trending_up,
     'Others': Icons.more_horiz,
   };
 
   @override
   void initState() {
     super.initState();
-    if (widget.item != null) {
-      _title = widget.item!.title;
-      _description = widget.item!.description;
-      _amount = double.tryParse(widget.item!.description ?? '0') ?? 0.0;
-    }
+
+    // Initialize with existing data or defaults
+    _title = widget.item?.title ?? '';
+    _amount = widget.item?.amount ?? 0.0;
+    _selectedCategory = widget.item?.category ?? widget.category;
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -74,20 +91,56 @@ class _AddEditScreenState extends State<AddEditScreen>
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
 
-      Item newItem = Item(
-        id: widget.item?.id,
-        title: _title,
-        description: _amount.toString(),
-      );
+      try {
+        final newItem = Item(
+          id: widget.item?.id,
+          title: _title,
+          amount: _amount,
+          type: widget.isIncome ? 'income' : 'expense',
+          category: _selectedCategory,
+        );
 
-      if (widget.item == null) {
-        await _dbHelper.insertItem(newItem);
-      } else {
-        await _dbHelper.updateItem(newItem);
+        if (widget.item == null) {
+          await _dbHelper.insertItem(newItem);
+        } else {
+          await _dbHelper.updateItem(newItem);
+        }
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                '${widget.isIncome ? "Income" : "Expense"} saved successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Pop twice if showing category selection
+        Navigator.pop(context);
+      } catch (e) {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Error saving ${widget.isIncome ? "income" : "expense"}: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
-
-      Navigator.pop(context);
     }
+  }
+
+  String? _validateAmount(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter an amount';
+    }
+    if (double.tryParse(value) == null) {
+      return 'Please enter a valid number';
+    }
+    if (double.parse(value) <= 0) {
+      return 'Amount must be greater than 0';
+    }
+    return null;
   }
 
   Widget _buildCategoryIcon(String category) {
@@ -105,19 +158,45 @@ class _AddEditScreenState extends State<AddEditScreen>
     );
   }
 
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: Colors.white70),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.blueAccent),
+      ),
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.1),
+      labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final categories = widget.isIncome ? _incomeCategories : _expenseCategories;
+
     return Scaffold(
       backgroundColor: Colors.blueGrey[900],
       appBar: AppBar(
         title: Text(
-          widget.item == null ? 'Add Expense' : 'Edit Expense',
+          widget.item == null
+              ? 'Add ${widget.isIncome ? "Income" : "Expense"}'
+              : 'Edit Transaction',
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 24,
           ),
         ),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: widget.isIncome ? Colors.green : Colors.redAccent,
         elevation: 0,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
@@ -130,217 +209,91 @@ class _AddEditScreenState extends State<AddEditScreen>
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header Section
-                Text(
-                  widget.item == null
-                      ? 'New Expense Details'
-                      : 'Update Expense',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title Input
+                  TextFormField(
+                    initialValue: _title,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _inputDecoration('Title', Icons.title),
+                    validator: (value) =>
+                        value?.isEmpty ?? true ? 'Please enter a title' : null,
+                    onSaved: (value) => _title = value ?? '',
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Please fill in the details below',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.6),
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
-                // Main Form Card
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.blueGrey[800]!.withOpacity(0.9),
-                        Colors.blueGrey[900]!.withOpacity(0.9),
-                      ],
+                  // Category Dropdown
+                  DropdownButtonFormField<String>(
+                    value: _selectedCategory,
+                    dropdownColor: Colors.blueGrey[800],
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _inputDecoration(
+                      'Category',
+                      _categoryIcons[_selectedCategory] ?? Icons.category,
                     ),
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                    items: categories.map((category) {
+                      return DropdownMenuItem(
+                        value: category,
+                        child: Row(
+                          children: [
+                            _buildCategoryIcon(category),
+                            const SizedBox(width: 12),
+                            Text(category,
+                                style: const TextStyle(color: Colors.white)),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _selectedCategory = value);
+                      }
+                    },
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Title Input
-                              TextFormField(
-                                initialValue: _title,
-                                decoration:
-                                    _inputDecoration('Title', Icons.title),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                ),
-                                validator: (value) =>
-                                    (value == null || value.isEmpty)
-                                        ? 'Title is required'
-                                        : null,
-                                onSaved: (value) => _title = value!,
-                              ),
-                              const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-                              // Category Dropdown
-                              Theme(
-                                data: Theme.of(context).copyWith(
-                                  canvasColor: Colors.blueGrey[800],
-                                ),
-                                child: DropdownButtonFormField<String>(
-                                  value: _selectedCategory,
-                                  decoration: _inputDecoration(
-                                    'Category',
-                                    _categoryIcons[_selectedCategory]!,
-                                  ),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                  ),
-                                  items: _categories.map((category) {
-                                    return DropdownMenuItem(
-                                      value: category,
-                                      child: Row(
-                                        children: [
-                                          _buildCategoryIcon(category),
-                                          const SizedBox(width: 12),
-                                          Text(category),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) => setState(
-                                      () => _selectedCategory = value!),
-                                ),
-                              ),
-                              const SizedBox(height: 20),
+                  // Amount Input
+                  TextFormField(
+                    initialValue: _amount > 0 ? _amount.toString() : '',
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _inputDecoration('Amount', Icons.money),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    validator: _validateAmount,
+                    onSaved: (value) =>
+                        _amount = double.tryParse(value ?? '0') ?? 0.0,
+                  ),
+                  const SizedBox(height: 32),
 
-                              // Amount Input
-                              TextFormField(
-                                initialValue: _amount.toString(),
-                                decoration: _inputDecoration(
-                                  'Amount',
-                                  Icons.attach_money,
-                                ),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                ),
-                                keyboardType: TextInputType.number,
-                                validator: (value) =>
-                                    (value == null || value.isEmpty)
-                                        ? 'Enter amount'
-                                        : null,
-                                onSaved: (value) =>
-                                    _amount = double.tryParse(value!) ?? 0.0,
-                              ),
-                              const SizedBox(height: 32),
-
-                              // Save Button
-                              SizedBox(
-                                width: double.infinity,
-                                height: 56,
-                                child: ElevatedButton(
-                                  onPressed: _saveItem,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blueAccent,
-                                    foregroundColor: Colors.white,
-                                    elevation: 8,
-                                    shadowColor:
-                                        Colors.blueAccent.withOpacity(0.5),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        widget.item == null
-                                            ? Icons.add_circle
-                                            : Icons.save,
-                                        size: 24,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        widget.item == null
-                                            ? 'Add Expense'
-                                            : 'Update Expense',
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                  // Save Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            widget.isIncome ? Colors.green : Colors.redAccent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
+                      onPressed: _saveItem,
+                      child: Text(
+                        widget.item == null
+                            ? 'Add ${widget.isIncome ? "Income" : "Expense"}'
+                            : 'Update Transaction',
+                        style: const TextStyle(fontSize: 16),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon, color: Colors.blueAccent),
-      filled: true,
-      fillColor: Colors.blueGrey[800]!.withOpacity(0.5),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(
-          color: Colors.blueAccent.withOpacity(0.5),
-          width: 2,
-        ),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(
-          color: Colors.blueAccent.withOpacity(0.3),
-          width: 2,
-        ),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(
-          color: Colors.blueAccent,
-          width: 2,
-        ),
-      ),
-      labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 16,
       ),
     );
   }

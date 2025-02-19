@@ -29,8 +29,8 @@ class _SplashScreenState extends State<SplashScreen>
     20,
     (index) => ParticleModel(
       position: Offset(
-        math.Random().nextDouble() * 400 - 200,
-        math.Random().nextDouble() * 400 - 200,
+        math.Random().nextDouble() * 600 - 200,
+        math.Random().nextDouble() * 600 - 200,
       ),
       speed: math.Random().nextDouble() * 2 + 1,
       angle: math.Random().nextDouble() * math.pi * 2,
@@ -147,34 +147,11 @@ class _SplashScreenState extends State<SplashScreen>
                         scale: _scaleAnimation,
                         child: RotationTransition(
                           turns: _rotationAnimation,
-                          child: Container(
-                            width: 140,
-                            height: 140,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.blue[300]!,
-                                  Colors.blue[600]!,
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.blue[300]!.withOpacity(0.5),
-                                  blurRadius: 20,
-                                  spreadRadius: 5,
-                                ),
-                              ],
-                            ),
-                            child: Center(
-                              child: Image.asset(
-                                'assets/logo.png',
-                                width: 80,
-                                height: 80,
-                                color: Colors.white,
-                              ),
+                          child: Center(
+                            child: Image.asset(
+                              'assets/logo.png',
+                              width: 80,
+                              height: 80,
                             ),
                           ),
                         ),
@@ -289,8 +266,10 @@ class _ParticleWidgetState extends State<ParticleWidget>
         width: 4,
         height: 4,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
-          shape: BoxShape.circle,
+          image: DecorationImage(
+            image: AssetImage('assets/logo.png'),
+            colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
+          ),
         ),
       ),
     );
