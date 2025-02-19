@@ -3,6 +3,7 @@ import 'package:expense_tracker_app/database_helper.dart';
 import 'package:expense_tracker_app/models/item_model.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
@@ -47,9 +48,15 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
 
   Future<void> _generatePdf(String month, List<Item> transactions) async {
     final pdf = pw.Document();
+
+    final font = pw.Font.ttf(
+      await rootBundle.load('assets/fonts/NotoSans-Regular.ttf'),
+    );
+
     double totalIncome = transactions
         .where((item) => item.type == 'income')
         .fold(0, (sum, item) => sum + item.amount);
+
     double totalExpense = transactions
         .where((item) => item.type == 'expense')
         .fold(0, (sum, item) => sum + item.amount);
@@ -59,12 +66,12 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
         build: (pw.Context context) => pw.Column(
           children: [
             pw.Text('Monthly Report - $month',
-                style: pw.TextStyle(fontSize: 24)),
+                style: pw.TextStyle(fontSize: 24, font: font)),
             pw.SizedBox(height: 16),
             pw.Text('Total Income: ₹${totalIncome.toStringAsFixed(2)}',
-                style: pw.TextStyle(color: PdfColors.green)),
+                style: pw.TextStyle(font: font, color: PdfColors.green)),
             pw.Text('Total Expense: ₹${totalExpense.toStringAsFixed(2)}',
-                style: pw.TextStyle(color: PdfColors.red)),
+                style: pw.TextStyle(font: font, color: PdfColors.red)),
             pw.SizedBox(height: 16),
             pw.Divider(),
             pw.ListView.builder(
@@ -76,9 +83,11 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
                   child: pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Text(transaction.title),
+                      pw.Text(transaction.title,
+                          style: pw.TextStyle(font: font)),
                       pw.Text('₹${transaction.amount.toStringAsFixed(2)}',
                           style: pw.TextStyle(
+                              font: font,
                               color: transaction.type == 'income'
                                   ? PdfColors.green
                                   : PdfColors.red)),
