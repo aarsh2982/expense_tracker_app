@@ -147,8 +147,8 @@ class _MonthlyReportScreenState extends State<MonthlyReportScreen> {
                     return ListTile(
                       leading: Icon(
                         transaction.type == 'income'
-                            ? Icons.arrow_upward
-                            : Icons.arrow_downward,
+                            ? Icons.arrow_downward
+                            : Icons.arrow_upward,
                         color: transaction.type == 'income'
                             ? Colors.green
                             : Colors.red,

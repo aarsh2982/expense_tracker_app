@@ -36,6 +36,48 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _deleteTransaction(Item item) async {
+    try {
+      await _dbHelper.deleteItem(item.id!);
+
+      // Show success snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${item.title} deleted'),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () async {
+              // Reinsert the deleted item
+              await _dbHelper.insertItem(item);
+              _loadData(); // Reload the data
+            },
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          margin: const EdgeInsets.all(8),
+        ),
+      );
+
+      // Reload data after deletion
+      _loadData();
+    } catch (e) {
+      // Show error snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete ${item.title}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          margin: const EdgeInsets.all(8),
+        ),
+      );
+    }
+  }
+
   Widget _buildFinanceCard(
       String title, double amount, IconData icon, Color color) {
     // Calculate progress value safely
@@ -113,69 +155,115 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTransactionItem(Item item) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: item.type == 'income'
-                ? Colors.green.withOpacity(0.2)
-                : Colors.red.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            item.type == 'income' ? Icons.arrow_upward : Icons.arrow_downward,
-            color: item.type == 'income' ? Colors.green : Colors.red,
-          ),
+    return Dismissible(
+      key: Key(item.id.toString()),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (direction) async {
+        return await showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Delete Transaction'),
+              content: Text('Are you sure you want to delete ${item.title}?'),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('Cancel'),
+                  onPressed: () => Navigator.of(context).pop(false),
+                ),
+                TextButton(
+                  child: const Text(
+                    'Delete',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onPressed: () => Navigator.of(context).pop(true),
+                ),
+              ],
+            );
+          },
+        );
+      },
+      onDismissed: (direction) {
+        _deleteTransaction(item);
+      },
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(12),
         ),
-        title: Text(
-          item.title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-          ),
+        child: const Icon(
+          Icons.delete,
+          color: Colors.white,
         ),
-        subtitle: Text(
-          item.category,
-          style: TextStyle(
-            color: Theme.of(context).textTheme.bodySmall?.color,
+      ),
+      child: Card(
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: ListTile(
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: item.type == 'income'
+                  ? Colors.green.withOpacity(0.2)
+                  : Colors.red.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              item.type == 'income' ? Icons.arrow_downward : Icons.arrow_upward,
+              color: item.type == 'income' ? Colors.green : Colors.red,
+            ),
           ),
-        ),
-        trailing: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              '₹${item.amount.toStringAsFixed(2)}',
-              style: TextStyle(
-                color: item.type == 'income' ? Colors.green : Colors.red,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+          title: Text(
+            item.title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          subtitle: Text(
+            item.category,
+            style: TextStyle(
+              color: _isDarkMode ? Colors.white70 : Colors.black54,
+            ),
+          ),
+          trailing: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '₹${item.amount.toStringAsFixed(2)}',
+                style: TextStyle(
+                  color: item.type == 'income' ? Colors.green : Colors.red,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
-            ),
-            Text(
-              _getFormattedDate(item.dateTime),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-        ),
-        onTap: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AddEditScreen(
-                item: item,
-                category: item.category,
-                isIncome: item.type == 'income',
+              Text(
+                _getFormattedDate(item.dateTime),
+                style: TextStyle(
+                  color: _isDarkMode ? Colors.white70 : Colors.black54,
+                ),
               ),
-            ),
-          );
-          _loadData();
-        },
+            ],
+          ),
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AddEditScreen(
+                  item: item,
+                  category: item.category,
+                  isIncome: item.type == 'income',
+                ),
+              ),
+            );
+            _loadData();
+          },
+        ),
       ),
     );
   }
@@ -329,10 +417,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             Icon(
                               Icons.account_balance_wallet,
                               size: 64,
-                              color: Theme.of(context)
-                                  .iconTheme
-                                  .color
-                                  ?.withOpacity(0.5),
+                              color: _isDarkMode
+                                  ? Colors.white.withOpacity(0.5)
+                                  : Theme.of(context)
+                                      .iconTheme
+                                      .color
+                                      ?.withOpacity(0.5),
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -341,11 +431,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                   .textTheme
                                   .titleLarge
                                   ?.copyWith(
-                                    color: Theme.of(context)
-                                        .textTheme
-                                        .bodyLarge
-                                        ?.color
-                                        ?.withOpacity(0.7),
+                                    color: _isDarkMode
+                                        ? Colors.white.withOpacity(0.7)
+                                        : Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.color
+                                            ?.withOpacity(0.7),
                                   ),
                             ),
                           ],
@@ -354,8 +446,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: _items.length,
-                        itemBuilder: (context, index) =>
-                            _buildTransactionItem(_items[index]),
+                        itemBuilder: (context, index) {
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                            child: _buildTransactionItem(_items[index]),
+                          );
+                        },
                       ),
               ),
             ],
