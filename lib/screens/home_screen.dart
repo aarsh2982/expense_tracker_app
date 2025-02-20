@@ -363,13 +363,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     _buildFinanceCard(
                       "Income",
                       _income,
-                      Icons.arrow_upward,
+                      Icons.arrow_downward,
                       Colors.green,
                     ),
                     _buildFinanceCard(
                       "Expense",
                       _totalExpense,
-                      Icons.arrow_downward,
+                      Icons.arrow_upward,
                       Colors.red,
                     ),
                   ],
